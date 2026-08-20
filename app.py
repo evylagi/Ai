@@ -35,7 +35,7 @@ def generate_image():
 
         # Call the API to generate the image
         response = client.models.generate_content(
-            model="gemini-3.1-flash-lite-image",
+            model="gemini-3.6-flash",
             contents=prompt,
         )
 
