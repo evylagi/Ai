@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Image Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #f7f9fc;
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1.5rem;
+            margin: 0;
+        }
+        .card {
+            max-width: 720px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 2rem;
+            box-shadow: 0 20px 40px -12px rgba(0,0,0,0.15);
+            padding: 2rem 2rem 2.5rem;
+        }
+        h1 {
+            font-weight: 600;
+            font-size: 1.8rem;
+            color: #0b1b2f;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+        .subhead {
+            color: #5b6f87;
+            font-size: 0.95rem;
+            margin-bottom: 1.75rem;
+            border-left: 4px solid #a0b8d0;
+            padding-left: 0.75rem;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #1f3a5f;
+            margin-bottom: 0.4rem;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border: 1px solid #dce3ec;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            background: #fafcff;
+            transition: 0.15s;
+        }
+        input[type="text"]:focus, textarea:focus {
+            border-color: #3b6eff;
+            outline: 2px solid #d2e0ff;
+            background: white;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .hint {
+            font-size: 0.8rem;
+            color: #6f85a0;
+            margin-top: 0.3rem;
+        }
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .btn {
+            background: #1f3a5f;
+            color: white;
+            border: none;
+            font-weight: 500;
+            padding: 0.7rem 1.8rem;
+            border-radius: 40px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn:hover {
+            background: #143049;
+            transform: scale(0.98);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .btn-secondary {
+            background: #eef2f8;
+            color: #1f3a5f;
+        }
+        .btn-secondary:hover {
+            background: #dfe6f0;
+        }
+        .status {
+            margin: 1.5rem 0 0.5rem;
+            font-size: 0.95rem;
+            color: #0b2d4b;
+            background: #ecf3fa;
+            padding: 0.6rem 1rem;
+            border-radius: 40px;
+            min-height: 2.8rem;
+            transition: 0.2s;
+        }
+        .status.error {
+            background: #fde8e8;
+            color: #8b2c2c;
+        }
+        .status.success {
+            background: #e8f5e9;
+            color: #1e4a2b;
+        }
+        .image-container {
+            margin-top: 1.5rem;
+            border-radius: 24px;
+            overflow: hidden;
+            background: #f2f6fd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 220px;
+            border: 1px solid #e4ebf5;
+            position: relative;
+        }
+        .image-container img {
+            max-width: 100%;
+            max-height: 480px;
+            object-fit: contain;
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .placeholder-text {
+            color: #8fa2bb;
+            font-size: 0.95rem;
+            padding: 3rem 1rem;
+            text-align: center;
+        }
+        .download-btn {
+            margin-top: 0.75rem;
+            background: #eef2f8;
+            border: 1px solid #d0dbe9;
+            color: #1a334f;
+            padding: 0.5rem 1.4rem;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .download-btn:hover {
+            background: #dce5f0;
+        }
+        .download-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .footer-note {
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            color: #899bb2;
+            border-top: 1px solid #e6edf6;
+            padding-top: 1.2rem;
+            text-align: center;
+        }
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2.5px solid #b7ccf0;
+            border-radius: 50%;
+            border-top: 2.5px solid #1f3a5f;
+            animation: spin 0.7s linear infinite;
+            margin-right: 6px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .hidden { display: none; }
+        .env-badge {
+            background: #e8edf5;
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            color: #1f3a5f;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        .env-badge.active {
+            background: #e8f5e9;
+            color: #1e4a2b;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>✨ Gemini Image</h1>
+    <div class="subhead">Generate images with <strong>gemini-2.5-flash-image-preview</strong></div>
+
+    <div class="env-badge" id="envBadge">🔑 Enter your API key below</div>
+
+    <div class="form-group">
+        <label for="apiKey">🔑 Gemini API Key</label>
+        <input type="text" id="apiKey" placeholder="Paste your API key (or leave blank if set in Railway)">
+        <div class="hint">If you set <code>GEMINI_API_KEY</code> in Railway, you can leave this blank.</div>
+    </div>
+
+    <div class="form-group">
+        <label for="promptInput">🖌️ Prompt</label>
+        <textarea id="promptInput">Create a photorealistic image of an orange cat with green eyes, sitting on a couch.</textarea>
+    </div>
+
+    <div class="flex-row">
+        <button class="btn" id="generateBtn">🚀 Generate</button>
+        <button class="btn btn-secondary" id="clearBtn">Clear image</button>
+    </div>
+
+    <div id="statusMessage" class="status">⏳ Ready</div>
+
+    <div class="image-container" id="imageContainer">
+        <div class="placeholder-text" id="placeholderMsg">🖼️ Your generated image will appear here</div>
+        <img id="generatedImage" class="hidden" alt="generated image" />
+    </div>
+
+    <button class="download-btn" id="downloadBtn" disabled>⬇️ Download image</button>
+
+    <div class="footer-note">
+        Uses Google Gemini API · model <code>gemini-2.5-flash-image-preview</code>
+    </div>
+</div>
+<script>
+    (function() {
+        const apiKeyInput = document.getElementById('apiKey');
+        const promptInput = document.getElementById('promptInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const statusDiv = document.getElementById('statusMessage');
+        const generatedImg = document.getElementById('generatedImage');
+        const placeholderMsg = document.getElementById('placeholderMsg');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const envBadge = document.getElementById('envBadge');
+
+        let currentImageDataURL = null;
+
+        // Check if API key is set in environment
+        async function checkEnvKey() {
+            try {
+                const response = await fetch('/api/check_key');
+                const data = await response.json();
+                if (data.has_key) {
+                    envBadge.textContent = '✅ API key loaded from Railway environment';
+                    envBadge.classList.add('active');
+                    apiKeyInput.placeholder = '✓ API key set in Railway (optional)';
+                }
+            } catch (e) {
+                // Silent fail
+            }
+        }
+
+        // Load saved API key from localStorage (if user entered one)
+        const savedKey = localStorage.getItem('gemini_api_key');
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+        }
+
+        checkEnvKey();
+
+        function displayImage(dataUrl) {
+            if (!dataUrl) {
+                generatedImg.classList.add('hidden');
+                generatedImg.src = '';
+                placeholderMsg.classList.remove('hidden');
+                downloadBtn.disabled = true;
+                currentImageDataURL = null;
+                return;
+            }
+            generatedImg.src = dataUrl;
+            generatedImg.classList.remove('hidden');
+            placeholderMsg.classList.add('hidden');
+            downloadBtn.disabled = false;
+            currentImageDataURL = dataUrl;
+        }
+
+        function clearImage() {
+            displayImage(null);
+            setStatus('🧹 Image cleared', '');
+        }
+
+        function setStatus(text, type = '') {
+            statusDiv.textContent = text;
+            statusDiv.className = 'status';
+            if (type) statusDiv.classList.add(type);
+        }
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                statusDiv.innerHTML = `<span class="spinner"></span> Generating image...`;
+                statusDiv.className = 'status';
+                generateBtn.disabled = true;
+            } else {
+                generateBtn.disabled = false;
+            }
+        }
+
+        async function generateImage() {
+            const apiKey = apiKeyInput.value.trim();
+            const prompt = promptInput.value.trim();
+
+            if (!prompt) {
+                setStatus('❌ Please enter a prompt.', 'error');
+                promptInput.focus();
+                return;
+            }
+
+            // Save key to localStorage for convenience
+            if (apiKey) {
+                localStorage.setItem('gemini_api_key', apiKey);
+            }
+
+            setLoading(true);
+            displayImage(null);
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        api_key: apiKey
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to generate image');
+                }
+
+                if (data.success) {
+                    const imageDataUrl = `data:${data.mime_type || 'image/png'};base64,${data.image_data}`;
+                    displayImage(imageDataUrl);
+                    setStatus('✅ Image generated successfully!', 'success');
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+
+            } catch (error) {
+                console.error('Generation error:', error);
+                setStatus(`❌ Error: ${error.message}`, 'error');
+                displayImage(null);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function downloadImage() {
+            if (!currentImageDataURL) {
+                alert('No image to download. Generate an image first.');
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = currentImageDataURL;
+            const promptText = promptInput.value.trim().slice(0, 30) || 'image';
+            const safe = promptText.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            link.download = `${safe || 'generated-image'}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        generateBtn.addEventListener('click', generateImage);
+        clearBtn.addEventListener('click', clearImage);
+        downloadBtn.addEventListener('click', downloadImage);
+
+        // Enter key support
+        promptInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                generateImage();
+            }
+        });
+
+        setStatus('✨ Enter your API key (if needed) and prompt, then click Generate', '');
+    })();
+</script>
+</body>
+</html>
