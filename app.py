@@ -1,13 +1,14 @@
-from flask import Flask, render_template, request, jsonify
-import requests
 import os
 import base64
-from datetime import datetime
+from flask import Flask, render_template, request, jsonify
+from google import genai
+from PIL import Image
+from io import BytesIO
 
 app = Flask(__name__)
 
-# Get API key from environment variable (set in Railway)
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AQ.Ab8RN6K53Ys32SQJ0LlC6QMYLtnxbqic_9-nWXT542qSdKFMGw')
+# Get API key from environment variable (optional - user can also provide their own)
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AQ.Ab8RN6JCVBv_D9qceB2J-s8DIbQh_uHfnYuACo1XXQ0tJo2ong')
 
 @app.route('/')
 def index():
@@ -26,58 +27,57 @@ def generate_image():
         if not prompt:
             return jsonify({'error': 'Prompt is required'}), 400
 
-        # Call Gemini API
-        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key={api_key}'
-        
-        payload = {
-            'contents': [{
-                'parts': [{'text': prompt}]
-            }]
-        }
+        # --- YOUR ORIGINAL CODE STARTS HERE ---
+        # Configure the client with your API key
+        client = genai.Client(api_key=api_key)
 
-        response = requests.post(url, json=payload, timeout=60)
-        
-        if response.status_code != 200:
-            error_msg = response.json().get('error', {}).get('message', 'Unknown error')
-            return jsonify({'error': f'API error: {error_msg}'}), response.status_code
+        print(f"Generating image for prompt: {prompt}")
 
-        result = response.json()
-        
-        # Extract image data
-        candidates = result.get('candidates', [])
-        if not candidates:
-            return jsonify({'error': 'No candidates in response'}), 400
+        # Call the API to generate the image
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-image-preview",
+            contents=prompt,
+        )
 
-        parts = candidates[0].get('content', {}).get('parts', [])
-        image_base64 = None
-        mime_type = 'image/png'
+        # Extract image data from response
+        image_parts = [
+            part.inline_data.data
+            for part in response.candidates[0].content.parts
+            if part.inline_data
+        ]
 
-        for part in parts:
-            if 'inlineData' in part:
-                inline_data = part['inlineData']
-                image_base64 = inline_data.get('data')
-                mime_type = inline_data.get('mimeType', 'image/png')
-                break
-
-        if not image_base64:
-            # Check if there's text response (safety block)
-            text_parts = [p.get('text') for p in parts if 'text' in p]
-            if text_parts:
-                return jsonify({'error': f'No image generated. Response: {" ".join(text_parts)}'}), 400
+        if not image_parts:
             return jsonify({'error': 'No image data found in response'}), 400
+
+        # Get the image data
+        image_data = image_parts[0]
+        
+        # Convert to base64 for sending to frontend
+        image_base64 = base64.b64encode(image_data).decode('utf-8')
+        
+        # Also save locally (optional)
+        try:
+            image = Image.open(BytesIO(image_data))
+            image.save('generated_image.png')
+        except Exception as e:
+            print(f"Could not save image locally: {e}")
 
         return jsonify({
             'success': True,
             'image_data': image_base64,
-            'mime_type': mime_type
+            'mime_type': 'image/png'  # Gemini returns PNG
         })
+        # --- YOUR ORIGINAL CODE ENDS HERE ---
 
-    except requests.exceptions.Timeout:
-        return jsonify({'error': 'Request timed out. Please try again.'}), 408
-    except requests.exceptions.RequestException as e:
-        return jsonify({'error': f'Network error: {str(e)}'}), 500
     except Exception as e:
-        return jsonify({'error': f'Server error: {str(e)}'}), 500
+        print(f"Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/check_key', methods=['GET'])
+def check_key():
+    """Check if API key is set in environment"""
+    has_key = bool(GEMINI_API_KEY)
+    return jsonify({'has_key': has_key})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
